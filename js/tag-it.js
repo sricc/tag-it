@@ -36,6 +36,16 @@
             caseSensitive     : true,
             placeholderText   : null,
             allowDuplicates   : false,
+            appendTo          : null,
+
+            // If the autocomplete menu should be scrollable
+            scrollableMenu: false,
+
+            // Menu background (defaults to light grey)
+            menuBackground: '#EBEBEB',
+
+            // The menu height
+            menuHeight: '100px',
 
             // The property to use as the tag label that 
             // can be either 'value' or 'label'
@@ -172,6 +182,18 @@
                 }
             }
 
+            // If scollableMenu is set, add appropriate css
+            if (this.options.scrollableMenu) {
+                $('.ui-autocomplete.ui-menu')
+                    .css('max-height',this.options.menuHeight)
+                    .css('overflow-y','auto')
+                    .css('overflow-x','hidden')
+                    .css('padding-right','20px');
+            }
+
+            // Set the menu background
+            $('.ui-autocomplete.ui-menu').css('background',this.options.menuBackground);
+
             // Events.
             this.tagInput
                 .keydown(function(event) {
@@ -251,6 +273,7 @@
                     source: this.options.tagSource,
                     minLength: this.options.minLength,
                     autoFocus: this.options.autoFocus,
+                    appendTo: this.options.appendTo,
                     focus: function(event, ui) {
                         // Decide whether to show the value or the label
                         var label = (that.options.tagLabel == 'value') ? ui.item.value : ui.item.label;
@@ -270,7 +293,6 @@
                         if (that.tagInput.val() === '') {
                             that.removeTag(that._lastTag(), false);
                         }
-
                         that.createTag(ui.item.value, ui.item.label);
                         // Preventing the tag input to be updated with the chosen value.
                         return false;
