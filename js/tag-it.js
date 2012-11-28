@@ -38,11 +38,12 @@
             allowDuplicates   : false,
             appendTo          : null,
 
-            // If the autocomplete menu should be scrollable
-            scrollableMenu: false,
+            // Allow the user to type freely and create a custom tag even if it's not in the source list
+            // The tag value will be the same as the label
+            freeTag: false,
 
-            // Menu background (defaults to light grey)
-            menuBackground: '#EBEBEB',
+            // If the autocomplete menu should be scrollable, defaults to true
+            scrollableMenu: true,
 
             // The menu height
             menuHeight: '100px',
@@ -182,29 +183,16 @@
                 }
             }
 
-            // If scollableMenu is set, add appropriate css
-            if (this.options.scrollableMenu) {
-                $('.ui-autocomplete.ui-menu')
-                    .css('max-height',this.options.menuHeight)
-                    .css('overflow-y','auto')
-                    .css('overflow-x','hidden')
-                    .css('padding-right','20px');
-            }
-
-            // Set the menu background
-            $('.ui-autocomplete.ui-menu').css('background',this.options.menuBackground);
-
             // Events.
             this.tagInput
                 .keydown(function(event) {
                     // Needed to allow the autocomplete menu to open when user hits the down arrow
-                    if (event.which !== $.ui.keyCode.DOWN)
-                        DOWN_PRESSED = false;
+                    DOWN_PRESSED = false;
 
                     // Capture DOWN key to begin search
                     if (event.which === $.ui.keyCode.DOWN && that.tagInput.val() === '') {
                         DOWN_PRESSED = true;
-                        that.tagInput.autocomplete( "search", "" );
+                        return;
                     }
 
                     // Clear the input and close the autocomplete on ESCAPE
@@ -219,11 +207,25 @@
                         if (!that.options.removeConfirmation || tag.hasClass('remove')) {
                             // When backspace is pressed, the last tag is deleted.
                             that.removeTag(tag);
+
+                            // Close the menu
+                            that.tagInput.autocomplete('close');
                         } else if (that.options.removeConfirmation) {
                             tag.addClass('remove ui-state-highlight');
                         }
                     } else if (that.options.removeConfirmation) {
                         that._lastTag().removeClass('remove ui-state-highlight');
+                    }
+
+                    // Allow user to input a free tag that doesn't exist in the source list
+                    if (that.options.freeTag && (event.which === $.ui.keyCode.ENTER )) {
+                        var value = that._cleanedInput();
+                        that.createTag(value, value);
+
+                        // If the menu is open for some reason
+                        // The autocomplete doesn't close automatically when TAB is pressed.
+                        // So let's ensure that it closes.
+                        that.tagInput.autocomplete('close');
                     }
 
                     // Comma/Space/Enter are all valid delimiters for new tags,
@@ -233,10 +235,10 @@
                     if (
                         event.which === $.ui.keyCode.COMMA ||
                         event.which === $.ui.keyCode.ENTER ||
-                        (
+                        /*(
                             event.which == $.ui.keyCode.TAB &&
                             that.tagInput.val() !== ''
-                        ) ||
+                        ) ||*/
                         (
                             event.which == $.ui.keyCode.SPACE &&
                             that.options.allowSpaces !== true &&
@@ -263,7 +265,15 @@
                     }
                 }).blur(function(e){
                     // Create a tag when the element loses focus (unless it's empty).
-                    that.createTag(that.tagInput.data('value'), that._cleanedInput());
+                    //that.createTag(that.tagInput.data('value'), that._cleanedInput());
+                    
+                    // Put the placeholder back if it exists
+                    if (that.options.placeholderText) {
+                        if (that.assignedTags().length < 1)
+                            that.tagInput.attr('placeholder', that.options.placeholderText);
+                    }
+                }).focus(function(e) {
+                    that.tagInput.attr('placeholder', '');
                 });
                 
 
@@ -298,6 +308,16 @@
                         return false;
                     },
                     open: function(event, ui) {
+                        // Remove options that have already been selected, if allowDuplicates is false
+                        if (! that.options.allowDuplicates ) {
+                            var tags = that.assignedTags();
+                            $(that.element).find('li.ui-menu-item').each(function(index, value) {
+                                if ( $.inArray($(this).data('uiAutocompleteItem').value, tags) > -1 ) {
+                                    $(this).remove();
+                                }                       
+                            });
+                        }
+
                         // Needed so that when user input is deleted and nothing is left in the input
                         // the autocomplete closes like it should
                         if (that.tagInput.val() === '' && !DOWN_PRESSED) {
@@ -310,6 +330,12 @@
                         }
                     }
                 });
+            }
+
+            // If scollableMenu is set, add appropriate css
+            if (this.options.scrollableMenu) {
+                if (! $(this.element).find('.ui-menu').hasClass('scrollable') )
+                    $(this.element).find('.ui-menu').addClass('scrollable');
             }
         },
 
